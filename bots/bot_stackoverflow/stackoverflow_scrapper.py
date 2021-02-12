@@ -21,6 +21,7 @@ if __name__ == '__main__':
     """The main script for web-scraping"""
     #Some configs
     key_search = "Python"
+    maximum_pages_search = 1
 
     try:
         logging.info('Initializing Stackoverflow web-scraping')
@@ -41,6 +42,7 @@ if __name__ == '__main__':
 
 
         # A simple example to bypass captcha on stackoverflow
+        # I didn't continue because it may take a lot of time, but I filtered the all questions by python term :)
         """try:
             logging.info('checking if captcha has appeared')
             captcha_text = browser.find_element_by_xpath('/html/body/div[3]/div[2]/div/div/div[2]/h1').text
@@ -68,6 +70,34 @@ if __name__ == '__main__':
         logging.info('Click on public>stackoverflow')
 
         browser.find_element_by_xpath('//*[@id="nav-questions"]').click()
+
+        logging.info('Waiting questions page load')
+        selenium_function.wait_element_appear(10,'//*[@id="mainbar"]',browser)
+
+        logging.info('Filtering by python')
+        browser.find_element_by_xpath('//button[@class= "s-btn s-btn__filled s-btn__sm s-btn__icon ws-nowrap"]').click()
+        time.sleep(2)
+        browser.find_element_by_xpath('//input[@class= "s-input js-tageditor-replacing"]').click()
+        browser.find_element_by_xpath('//input[@class= "s-input js-tageditor-replacing"]').send_keys(key_search)
+        browser.find_element_by_xpath('//button[@class= "s-btn s-btn__sm s-btn__primary grid--cell"]').click()
+        time.sleep(1)
+        browser.find_element_by_xpath('//button[@class= "s-btn s-btn__filled s-btn__sm s-btn__icon ws-nowrap is-selected"]').click()
+
+        time.sleep(3)
+
+
+        #First of all: Create a page-changer engine
+        for i in range(maximum_pages_search):
+
+            #Second Loop: Identify all posts
+            #
+                #Third Loop: Collect all data from the posts individually
+                    # (Maybe scrapy? to be fast)
+
+
+
+            browser.find_element_by_xpath('//a[@class="s-pagination--item js-pagination-item"]').click()
+            time.sleep(5)
 
 
 
