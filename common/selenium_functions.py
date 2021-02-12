@@ -50,5 +50,44 @@ def initialize_webdriver(headless_choice=None, download_path=None):
 
     options.headless = headless_choice
     browser = webdriver.Firefox(executable_path=gecko_executable_path, options=options,
-                                capabilities=firefox_capabilities)  # starts driver
+                                capabilities=firefox_capabilities,service_log_path='./working_directory/geckodriver.log')  # starts driver
+    logging.info('Initializing Firefox Webdriver')
+
     return browser
+
+
+def wait_element_appear(MAXTIME,XPATH,browser):
+    LOADING_ELEMENT_XPATH = XPATH
+    try:
+        WebDriverWait(browser, MAXTIME
+                      ).until(EC.presence_of_element_located((By.XPATH, LOADING_ELEMENT_XPATH)))
+        logging.debug("Waited element appear")
+        return True
+    except TimeoutException:
+        logging.debug("Doesn't Wait element appear")
+        return False
+
+def wait_element_disappear(MAXTIME,XPATH,browser):
+    LOADING_ELEMENT_XPATH = XPATH
+    try:
+        WebDriverWait(browser, MAXTIME
+                      ).until_not(EC.presence_of_element_located((By.XPATH, LOADING_ELEMENT_XPATH)))
+        logging.debug("Waited element disappear")
+    except TimeoutException:
+        logging.debug("Doesn't Wait element disappear")
+
+def wait_loading(MAXTIME,XPATH,browser):
+
+    try:
+        WebDriverWait(browser, MAXTIME
+                      ).until(EC.presence_of_element_located((By.XPATH, XPATH)))
+        logging.debug("Loading waited")
+    except TimeoutException:
+        logging.debug("Loading appeared")
+
+    try:
+        WebDriverWait(browser, MAXTIME
+                      ).until_not(EC.presence_of_element_located((By.XPATH, XPATH)))
+        logging.debug("Waited loading disappear")
+    except TimeoutException:
+        logging.debug("Loading fail")
