@@ -1,16 +1,18 @@
 import json
-import sys
 import logging
-import datetime
+import random
+import string
+import sys
 import time
+
+import requests
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.keys import Keys
-import requests
-import string
-import random
-import common.selenium_functions as selenium_function
-#import common.captcha_solver as captcha_function
+
+# import common.captcha_solver as captcha_function
 import common.database_functions as database_function
+import common.selenium_functions as selenium_function
+
 with open('config/config.json', 'r') as myfile:
     CONFIG = json.load(myfile)
 sys.path.append(CONFIG['REPOSITORY_PATH'])
@@ -20,58 +22,56 @@ logging.getLogger().addHandler(logging.StreamHandler())
 
 
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
-   return ''.join(random.choice(chars) for _ in range(size))
+    return ''.join(random.choice(chars) for _ in range(size))
 
 
 def content_parser_and_export_data(post_url):
-
-    #Generates a random code for ID POST
+    # Generates a random code for ID POST
     post_code = id_generator()
+    #make a request to get partial post
+    # (some comments aren't avaliable on standard html, but I found a way to get all commentaries below.)
     html_text = requests.get(post_url).text
     soup = BeautifulSoup(html_text, 'html.parser')
 
-
     ####### Parsing main question
 
-    titulo = soup.find("h1", class_="fs-headline1 ow-break-word mb8 grid--cell fl1").text
+    post_title = soup.find("h1", class_="fs-headline1 ow-break-word mb8 grid--cell fl1").text
     post_soup = soup.find('div', {'class': 'post-layout'})
     post_text = post_soup.find('div', {'class': 's-prose js-post-body'}).text
     post_author = post_soup.find('span', {'class': 'd-none', 'itemprop': 'name'}).text
     post_time = post_soup.find('span', {'class': 'relativetime'}).text
 
-    print(titulo)
+    print(post_title)
     print(post_text)
     print(post_author)
     print(post_time)
 
-    #GET TAGS
+    # GET TAGS
     post_tags = ''
     tags = post_soup.find_all('a', {'rel': 'tag'})
     for ul in tags:
         current_tag = ul.text
-        post_tags = str(post_tags +'/'+current_tag)
+        post_tags = str(post_tags + '/' + current_tag)
 
     print(post_tags)
 
-
-    #Insert into database
-    database_function.insert_into_stack_posts(post_code,titulo,post_author,str(post_text),
-                                              post_time,post_tags,post_url)
+    # Insert into posts database
+    database_function.insert_into_stack_posts(post_code, post_title, post_author, str(post_text),
+                                              post_time, post_tags, post_url)
 
     # Get comments id
-    # get ID of comment
     comments_post = \
-    post_soup.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext('div').attrs[
-        'data-post-id']
+        post_soup.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext('div').attrs[
+            'data-post-id']
 
-    # make a request with id
+    # make a request with comment id
     response_comments = requests.get('https://stackoverflow.com/posts/' + str(comments_post) + '/comments?_').text
     soup_owner_post_comments = BeautifulSoup(response_comments, 'html.parser')
 
+    # soup comments and get all information
     all_comments_post = soup_owner_post_comments.find_all('span', {'class': 'comment-copy'})
     comment_count = 0
     for ul in all_comments_post:
-
         current_comment_originalpost = ul.text
         current_owner_comment_originalpost = ul.findNext('a').text
         current_data_comment_originalpost = ul.findNext('a').findNext('span').findNext('span').text
@@ -80,12 +80,11 @@ def content_parser_and_export_data(post_url):
         print(current_owner_comment_originalpost)
         print(current_data_comment_originalpost)
 
-        #Insert into comments table
-        database_function.insert_into_stack_comments(post_code,None,comment_count,current_owner_comment_originalpost,
-                                                     current_comment_originalpost,current_data_comment_originalpost)
-        comment_count = comment_count+1
+        # Insert into comments table
+        database_function.insert_into_stack_comments(post_code, None, comment_count, current_owner_comment_originalpost,
+                                                     current_comment_originalpost, current_data_comment_originalpost)
+        comment_count = comment_count + 1
         print('\n\n')
-
 
     try:
         ####### Parsing Accepted Answer
@@ -94,20 +93,22 @@ def content_parser_and_export_data(post_url):
 
         accepted_answer = soup.find('div', {'itemprop': 'acceptedAnswer'})
         accepted_answer_text = accepted_answer.find('div', {'class': 's-prose js-post-body'}).text
-        accepted_answer_author = accepted_answer.find('span', {'class': 'd-none','itemprop':'name'}).text
+        accepted_answer_author = accepted_answer.find('span', {'class': 'd-none', 'itemprop': 'name'}).text
         accepted_answer_time = accepted_answer.find('span', {'class': 'relativetime'}).text
 
         print(accepted_answer_text)
         print(accepted_answer_author)
         print(accepted_answer_time)
 
-        database_function.insert_into_stack_answers(post_code,answer_accepted_code,'ACCEPTED_ANSWER',accepted_answer_author,
-                                                    accepted_answer_text,accepted_answer_time)
+        database_function.insert_into_stack_answers(post_code, answer_accepted_code, 'ACCEPTED_ANSWER',
+                                                    accepted_answer_author,
+                                                    accepted_answer_text, accepted_answer_time)
 
-        #Get comments id
-        # get ID of comment
-        comments_post = accepted_answer.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext('div').attrs[
-            'data-post-id']
+        # Get comments id
+        comments_post = \
+            accepted_answer.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext(
+                'div').attrs[
+                'data-post-id']
         # make a request with id
         response_comments = requests.get('https://stackoverflow.com/posts/' + str(comments_post) + '/comments?_').text
         soup_owner_post_comments = BeautifulSoup(response_comments, 'html.parser')
@@ -115,7 +116,6 @@ def content_parser_and_export_data(post_url):
         all_comments_post = soup_owner_post_comments.find_all('span', {'class': 'comment-copy'})
         comment_count = 0
         for ul in all_comments_post:
-
             current_comment_originalpost = ul.text
             current_owner_comment_originalpost = ul.findNext('a').text
             current_data_comment_originalpost = ul.findNext('a').findNext('span').findNext('span').text
@@ -124,8 +124,9 @@ def content_parser_and_export_data(post_url):
             print(current_owner_comment_originalpost)
             print(current_data_comment_originalpost)
 
-            database_function.insert_into_stack_comments(post_code,answer_accepted_code,comment_count,
-                                                         current_owner_comment_originalpost,current_comment_originalpost,
+            database_function.insert_into_stack_comments(post_code, answer_accepted_code, comment_count,
+                                                         current_owner_comment_originalpost,
+                                                         current_comment_originalpost,
                                                          current_data_comment_originalpost)
 
             comment_count = comment_count + 1
@@ -156,10 +157,12 @@ def content_parser_and_export_data(post_url):
 
             # get ID of comment
             comments_post = \
-                any_answer.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext('div').attrs[
+                any_answer.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext(
+                    'div').attrs[
                     'data-post-id']
             # make a request with id
-            response_comments = requests.get('https://stackoverflow.com/posts/' + str(comments_post) + '/comments?_').text
+            response_comments = requests.get(
+                'https://stackoverflow.com/posts/' + str(comments_post) + '/comments?_').text
             soup_owner_suggested_post_comments = BeautifulSoup(response_comments, 'html.parser')
 
             all_comments_post = soup_owner_suggested_post_comments.find_all('span', {'class': 'comment-copy'})
@@ -173,8 +176,9 @@ def content_parser_and_export_data(post_url):
                 print(current_owner_comment_originalpost)
                 print(current_data_comment_originalpost)
 
-                database_function.insert_into_stack_comments(post_code,suggested_answer_code,comment_count,
-                                                             current_owner_comment_originalpost,current_comment_originalpost,
+                database_function.insert_into_stack_comments(post_code, suggested_answer_code, comment_count,
+                                                             current_owner_comment_originalpost,
+                                                             current_comment_originalpost,
                                                              current_data_comment_originalpost)
 
                 comment_count = comment_count + 1
@@ -185,7 +189,7 @@ def content_parser_and_export_data(post_url):
 
 if __name__ == '__main__':
     """The main script for web-scraping"""
-    #Some configs
+    # Some configs
     key_search = "Python"
     maximum_pages_search = 2
 
@@ -198,14 +202,12 @@ if __name__ == '__main__':
         browser.get('https://stackoverflow.com/')
 
         logging.info('Waiting webpage load')
-        selenium_function.wait_element_appear(10,'//*[@id="search"]/div/input',browser)
-
+        selenium_function.wait_element_appear(10, '//*[@id="search"]/div/input', browser)
 
         logging.info('Searching for: Python')
         browser.find_element_by_xpath('//*[@id="search"]/div/input').send_keys(key_search)
         browser.find_element_by_xpath('//*[@id="search"]/div/input').send_keys(Keys.ENTER)
         time.sleep(2)
-
 
         # A simple example to bypass captcha on stackoverflow
         # I didn't continue because it may take a lot of time and $10, but I filtered the all questions by python term :)
@@ -229,16 +231,15 @@ if __name__ == '__main__':
         except:
             pass"""
 
-
         logging.info('Waiting search load')
-        selenium_function.wait_element_appear(10,'//*[@id="nav-questions"]',browser)
+        selenium_function.wait_element_appear(10, '//*[@id="nav-questions"]', browser)
 
         logging.info('Click on public>stackoverflow')
 
         browser.find_element_by_xpath('//*[@id="nav-questions"]').click()
 
         logging.info('Waiting questions page load')
-        selenium_function.wait_element_appear(10,'//*[@id="mainbar"]',browser)
+        selenium_function.wait_element_appear(10, '//*[@id="mainbar"]', browser)
 
         logging.info('Filtering by python')
         browser.find_element_by_xpath('//button[@class= "s-btn s-btn__filled s-btn__sm s-btn__icon ws-nowrap"]').click()
@@ -247,38 +248,39 @@ if __name__ == '__main__':
         browser.find_element_by_xpath('//input[@class= "s-input js-tageditor-replacing"]').send_keys(key_search)
         browser.find_element_by_xpath('//button[@class= "s-btn s-btn__sm s-btn__primary grid--cell"]').click()
         time.sleep(1)
-        browser.find_element_by_xpath('//button[@class= "s-btn s-btn__filled s-btn__sm s-btn__icon ws-nowrap is-selected"]').click()
+        browser.find_element_by_xpath(
+            '//button[@class= "s-btn s-btn__filled s-btn__sm s-btn__icon ws-nowrap is-selected"]').click()
 
         time.sleep(3)
 
         url_list = []
 
-        #First of all: Create a page-changer engine
+        # First of all: Create a page-changer engine
         for i in range(maximum_pages_search):
             list_of_elements = browser.find_elements_by_class_name('question-hyperlink')
 
             for j in range(len(list_of_elements)):
                 current_url = list_of_elements[j].get_attribute('href')
-                print(current_url)
                 url_list.append(current_url)
 
-
-
-
             browser.find_element_by_xpath('//a[@class="s-pagination--item js-pagination-item"]').click()
+            logging.info('Going to the next page!')
             time.sleep(5)
 
-
         browser.quit()
+        logging.info('Browser discarted')
+        logging.info('Initializing BS4 and parser')
+
 
         # END OF SELENIUM WORK
         # Now its time to use BS4 to get and parse all information.
         for i in range(len(url_list)):
             content_parser_and_export_data(url_list[i])
+            logging.info("Parsing "+str(i)+" of "+str(len(url_list)))
 
-        #Finished the parsing and database insertions.
+        # Finished the parsing and database insertions.
 
-        #Now its time to use the API
+        # Now its time to use the API
 
 
 
