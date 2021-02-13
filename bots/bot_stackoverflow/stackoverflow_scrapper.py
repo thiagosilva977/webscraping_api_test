@@ -189,6 +189,7 @@ def content_parser_and_export_data(post_url):
 
 if __name__ == '__main__':
     """The main script for web-scraping"""
+    """Scrapper Version 1.0"""
     # Some configs
     key_search = "Python"
     maximum_pages_search = 2
