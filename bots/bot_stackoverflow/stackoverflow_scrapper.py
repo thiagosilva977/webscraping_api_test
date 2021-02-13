@@ -57,7 +57,7 @@ def content_parser_and_export_data(post_url):
 
 
     #Insert into database
-    database_function.insert_into_stack_posts(post_code,titulo,post_author,post_text,
+    database_function.insert_into_stack_posts(post_code,titulo,post_author,str(post_text),
                                               post_time,post_tags,post_url)
 
     # Get comments id
