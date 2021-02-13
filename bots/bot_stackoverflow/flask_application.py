@@ -56,7 +56,75 @@ def get_all_comments():
   return jsonify({'result' : output})
 
 
+@app.route('/search_name', methods=['GET'])
+def search_name():
 
+    username = request.form.get("autor")
+    if username == None:
+        username = request.args.get('autor')
+
+    if '%'in username:
+        username = username.replace('%',' ')
+
+    output_query_posts = []
+    output_query_answers = []
+    output_query_comments = []
+
+    # query: posts
+    myquery_post = {"AUTHOR_POST": username}
+    mydoc_posts = mongo.db.table_stack_posts.find(myquery_post)
+
+    for x in mydoc_posts:
+        results = {
+                    "id_post": x.get('ID_POST'),
+                    "title_post": x.get('TITLE_POST'),
+                    "author_post": x.get('AUTHOR_POST'),
+                    "text_post": x.get('TEXT_POST'),
+                    "date_post": x.get('DATE_POST'),
+                    "tags": x.get('TAGS'),
+                    "url_post": x.get('URL_POST'),
+                    "insertion_date": x.get('INSERTION_DATE'),
+        }
+        output_query_posts.append(results)
+
+
+
+
+    # query: answers
+    myquery_answer = {"AUTHOR_ANSWER": username}
+    mydoc_answer = mongo.db.table_stack_answers.find(myquery_answer)
+    for x in mydoc_answer:
+        results = {
+                    "id_post": x.get('ID_POST'),
+                    "id_answer": x.get('ID_ANSWER'),
+                    "answer_type": x.get('ANSWER_TYPE'),
+                    "author_answer": x.get('AUTHOR_ANSWER'),
+                    "text_answer": x.get('TEXT_ANSWER'),
+                    "date_answer": x.get('DATE_ANSWER'),
+                    "insertion_date": x.get('INSERTION_DATE'),
+        }
+        output_query_answers.append(results)
+
+
+
+
+    # query: answers
+    myquery_comments = {"AUTHOR_COMMENT": username}
+    mydoc_comment = mongo.db.table_stack_comments.find(myquery_comments)
+    for x in mydoc_comment:
+        results = {
+                    "id_post": x.get('ID_POST'),
+                    "id_answer": x.get('ID_ANSWER'),
+                    "id_comment": x.get('ID_COMMENT'),
+                    "author_comment": x.get('AUTHOR_COMMENT'),
+                    "text_comment": x.get('TEXT_COMMENT'),
+                    "date_comment": x.get('DATE_COMMENT'),
+                    "insertion_date": x.get('INSERTION_DATE'),
+        }
+        output_query_comments.append(results)
+
+
+    return jsonify({'posts': output_query_posts,'answers': output_query_answers,'comments': output_query_comments})
 
 
 
