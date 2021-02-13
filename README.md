@@ -35,7 +35,7 @@
 <li>O firefox n&atilde;o est&aacute; em Headlless apenas por motivos de apresenta&ccedil;&atilde;o</li>
 </ul>
 <p>&nbsp;</p>
-<h2>Features</h2>
+<h2>Próximas Features</h2>
 <ul>
   <li><s>Fun&ccedil;&otilde;es auxiliares</s>></li>
   <li><s>Configura&ccedil;&otilde;es separadas em um arquivo Json</s>></li>
