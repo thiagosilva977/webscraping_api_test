@@ -6,18 +6,18 @@ import time
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.keys import Keys
 import requests
+import string
+import random
+import common.selenium_functions as selenium_function
+#import common.captcha_solver as captcha_function
+import common.database_functions as database_function
 with open('config/config.json', 'r') as myfile:
     CONFIG = json.load(myfile)
 sys.path.append(CONFIG['REPOSITORY_PATH'])
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p',
                     filename='./working_directory/webscraping_logs.log', level=logging.DEBUG)
 logging.getLogger().addHandler(logging.StreamHandler())
-import string
-import random
 
-import common.selenium_functions as selenium_function
-import common.captcha_solver as captcha_function
-import common.database_functions as database_function
 
 def id_generator(size=6, chars=string.ascii_uppercase + string.digits):
    return ''.join(random.choice(chars) for _ in range(size))
@@ -27,13 +27,11 @@ def content_parser_and_export_data(post_url):
 
     #Generates a random code for ID POST
     post_code = id_generator()
-    #post_url = 'https://stackoverflow.com/questions/11804148/parsing-html-to-get-text-inside-an-element'
-    #post_url = 'https://stackoverflow.com/questions/66175822/how-can-i-validate-a-list-index-as-an-integer'
     html_text = requests.get(post_url).text
     soup = BeautifulSoup(html_text, 'html.parser')
 
 
-    ####### ABOUT MAIN QUESTION
+    ####### Parsing main question
 
     titulo = soup.find("h1", class_="fs-headline1 ow-break-word mb8 grid--cell fl1").text
     post_soup = soup.find('div', {'class': 'post-layout'})
@@ -66,14 +64,14 @@ def content_parser_and_export_data(post_url):
     post_soup.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext('div').attrs[
         'data-post-id']
 
-    # make an request with id
+    # make a request with id
     response_comments = requests.get('https://stackoverflow.com/posts/' + str(comments_post) + '/comments?_').text
     soup_owner_post_comments = BeautifulSoup(response_comments, 'html.parser')
 
     all_comments_post = soup_owner_post_comments.find_all('span', {'class': 'comment-copy'})
-
+    comment_count = 0
     for ul in all_comments_post:
-        comment_code = id_generator()
+
         current_comment_originalpost = ul.text
         current_owner_comment_originalpost = ul.findNext('a').text
         current_data_comment_originalpost = ul.findNext('a').findNext('span').findNext('span').text
@@ -83,14 +81,14 @@ def content_parser_and_export_data(post_url):
         print(current_data_comment_originalpost)
 
         #Insert into comments table
-        database_function.insert_into_stack_comments(post_code,None,comment_code,current_owner_comment_originalpost,
+        database_function.insert_into_stack_comments(post_code,None,comment_count,current_owner_comment_originalpost,
                                                      current_comment_originalpost,current_data_comment_originalpost)
-
+        comment_count = comment_count+1
         print('\n\n')
 
 
     try:
-        ####### ABOUT ACCEPTED ANSWER
+        ####### Parsing Accepted Answer
 
         answer_accepted_code = id_generator()
 
@@ -110,14 +108,13 @@ def content_parser_and_export_data(post_url):
         # get ID of comment
         comments_post = accepted_answer.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext('div').attrs[
             'data-post-id']
-        # make an request with id
+        # make a request with id
         response_comments = requests.get('https://stackoverflow.com/posts/' + str(comments_post) + '/comments?_').text
         soup_owner_post_comments = BeautifulSoup(response_comments, 'html.parser')
 
         all_comments_post = soup_owner_post_comments.find_all('span', {'class': 'comment-copy'})
-
+        comment_count = 0
         for ul in all_comments_post:
-            comment_code = id_generator()
 
             current_comment_originalpost = ul.text
             current_owner_comment_originalpost = ul.findNext('a').text
@@ -127,17 +124,18 @@ def content_parser_and_export_data(post_url):
             print(current_owner_comment_originalpost)
             print(current_data_comment_originalpost)
 
-            database_function.insert_into_stack_comments(post_code,answer_accepted_code,comment_code,
+            database_function.insert_into_stack_comments(post_code,answer_accepted_code,comment_count,
                                                          current_owner_comment_originalpost,current_comment_originalpost,
                                                          current_data_comment_originalpost)
 
+            comment_count = comment_count + 1
             print('\n\n')
 
     except:
         pass
 
     try:
-        ####### ABOUT SUGGESTED ANSWER
+        ####### Parsing suggested answer
 
         suggested_answer = soup.find_all('div', {'itemprop': 'suggestedAnswer'})
 
@@ -152,7 +150,7 @@ def content_parser_and_export_data(post_url):
             print(suggested_answer_author)
             print(suggested_answer_time)
 
-            database_function.insert_into_stack_answers(post_code, answer_accepted_code, 'SUGGESTED_ANSWER',
+            database_function.insert_into_stack_answers(post_code, suggested_answer_code, 'SUGGESTED_ANSWER',
                                                         suggested_answer_author,
                                                         suggested_answer_text, suggested_answer_time)
 
@@ -160,13 +158,13 @@ def content_parser_and_export_data(post_url):
             comments_post = \
                 any_answer.find('div', {'class': 'post-layout--right js-post-comments-component'}).findNext('div').attrs[
                     'data-post-id']
-            # make an request with id
+            # make a request with id
             response_comments = requests.get('https://stackoverflow.com/posts/' + str(comments_post) + '/comments?_').text
             soup_owner_suggested_post_comments = BeautifulSoup(response_comments, 'html.parser')
 
             all_comments_post = soup_owner_suggested_post_comments.find_all('span', {'class': 'comment-copy'})
+            comment_count = 0
             for ul in all_comments_post:
-                comment_code = id_generator()
                 current_comment_originalpost = ul.text
                 current_owner_comment_originalpost = ul.findNext('a').text
                 current_data_comment_originalpost = ul.findNext('a').findNext('span').findNext('span').text
@@ -175,10 +173,11 @@ def content_parser_and_export_data(post_url):
                 print(current_owner_comment_originalpost)
                 print(current_data_comment_originalpost)
 
-                database_function.insert_into_stack_comments(post_code,suggested_answer_code,comment_code,
+                database_function.insert_into_stack_comments(post_code,suggested_answer_code,comment_count,
                                                              current_owner_comment_originalpost,current_comment_originalpost,
                                                              current_data_comment_originalpost)
 
+                comment_count = comment_count + 1
                 print('\n\n')
     except:
         pass
