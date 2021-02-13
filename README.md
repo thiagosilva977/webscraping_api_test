@@ -50,5 +50,4 @@
 <p>&nbsp;</p>
 <p>Como est&aacute; organizado o banco de dados e as informa&ccedil;&otilde;es dispon&iacute;veis:&nbsp;</p>
 <p>&nbsp;</p>
-<p>&nbsp;</p>
-<p>&nbsp;</p>
+![database](https://user-images.githubusercontent.com/11250089/107842183-0e79f280-6da0-11eb-8f57-0bdedff276d2.png)
